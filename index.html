@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ニジ看護転職</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f8fafc;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px 30px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            text-align: center;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        h1 {
+            font-size: 20px;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .status {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            margin: 20px auto;
+            border: 3px solid #e5e7eb;
+            border-top: 3px solid #06C755;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .line-button {
+            display: none;
+            background: #06C755;
+            color: white;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 15px;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .help-text {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 13px;
+            color: #9ca3af;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="logo"><img src="logo.jpg" alt="ニジ看護"></div>
+        <h1>ニジ看護へようこそ</h1>
+        <p class="status" id="status">読み込み中...</p>
+        <div class="spinner" id="spinner"></div>
+        <button class="line-button" id="lineButton">LINEで開く</button>
+        <p class="help-text">LINE公式アカウントと連携します</p>
+    </div>
+
+    <script>
+        const CONFIG = {
+            LIFF_ID: '2008950156-3F6BtkoM',
+            GAS_URL: 'https://script.google.com/macros/s/AKfycbwT4dlPuH3edMjF5aWRV_TgAzU0Rz7YS76Zb-H0Dv3G02ph0DR1KY006ldArCJZngFs/exec',
+            FRIEND_URL: 'https://lin.ee/1NjYtUc'
+        };
+
+        async function main() {
+            const status = document.getElementById('status');
+            const spinner = document.getElementById('spinner');
+            const btn = document.getElementById('lineButton');
+
+            try {
+                await liff.init({ liffId: CONFIG.LIFF_ID });
+
+                // 外部ブラウザの場合
+                if (!liff.isInClient()) {
+                    spinner.style.display = 'none';
+                    status.textContent = 'LINEアプリで開いてください';
+                    btn.style.display = 'inline-block';
+                    btn.onclick = () => {
+                        window.location.href = `https://liff.line.me/${CONFIG.LIFF_ID}${window.location.search}`;
+                    };
+                    return;
+                }
+
+                // 未ログイン
+                if (!liff.isLoggedIn()) {
+                    liff.login({ redirectUri: window.location.href });
+                    return;
+                }
+
+                status.textContent = '登録中...';
+
+                // プロフィール取得の高速化（IDトークンから取得を試みる）
+                const idToken = liff.getDecodedIDToken();
+                let userId, displayName;
+
+                if (idToken) {
+                    userId = idToken.sub;
+                    displayName = idToken.name;
+                    console.log('User info retrieved from ID Token');
+                } else {
+                    // トークンが取れない場合のみ getProfile を呼ぶ（ネットワーク通信が発生）
+                    const profile = await liff.getProfile();
+                    userId = profile.userId;
+                    displayName = profile.displayName;
+                    console.log('User info retrieved via getProfile');
+                }
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const tag = urlParams.get('tag') || 'general';
+
+                // GASにデータ送信
+                const params = new URLSearchParams({
+                    action: 'save_liff_tag',
+                    userId: userId,
+                    tag: tag,
+                    displayName: displayName
+                });
+
+                const img = new Image();
+
+                // 結果を待たずに（投げっぱなし）即座に遷移
+                // IDトークン利用で高速化されたため、ウェイトも少し短縮(200ms)
+                img.src = `${CONFIG.GAS_URL}?${params.toString()}`;
+
+                status.textContent = '移動します...';
+                setTimeout(() => {
+                    window.location.href = CONFIG.FRIEND_URL;
+                }, 200);
+
+            } catch (error) {
+                spinner.style.display = 'none';
+                status.textContent = 'エラーが発生しました';
+                btn.style.display = 'inline-block';
+                btn.textContent = '再試行';
+                btn.onclick = () => location.reload();
+            }
+        }
+
+        window.addEventListener('load', main);
+    </script>
+</body>
+
+</html>
