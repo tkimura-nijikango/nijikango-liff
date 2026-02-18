@@ -162,13 +162,15 @@
 
                 const urlParams = new URLSearchParams(window.location.search);
                 const tag = urlParams.get('tag') || 'general';
+                const utmCampaign = urlParams.get('utm_campaign') || '';
 
-                // GASにデータ送信
+                // GASにデータ送信（utm_campaign → 流入経路として保存）
                 const params = new URLSearchParams({
                     action: 'save_liff_tag',
                     userId: userId,
                     tag: tag,
-                    displayName: displayName
+                    displayName: displayName,
+                    utm_campaign: utmCampaign
                 });
 
                 const img = new Image();
